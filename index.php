@@ -364,116 +364,375 @@ function myFunctionContent() {
 
 
 
-      function appendMessageRow(message) {
-        var  s = getHeader(message.payload.headers, 'Date');
+  function appendMessageRow(message) {
+        
+        var from = getHeader(message.payload.headers, 'From'),
+            subject = getHeader(message.payload.headers, 'Subject').replace(/\"/g, '&quot;'),
+            date = getHeader(message.payload.headers, 'Date'),
+            to = getHeader(message.payload.headers, 'To'),
+            snippet = message.snippet.substr(0,50),
+            rows = '', modal = '', attachments = [];
+            $exstClass = '';
+            $exstTitle = '';
+            $exstBtnSaveDisplay = '';
+            
+            if($.inArray(message.id, window.g_existing_mid) !== -1){
+                $exstClass = 'alert alert-danger';
+                $exstTitle = 'This message has been saved to the Notes Tool already';
+                $exstBtnSaveDisplay = 'hidden';
+            }
+            
+            rows += '<tr class="'+ $exstClass +'" title="'+ $exstTitle +'">';
+            rows += '<td>'+ from +'</td>';
+            //rows += '<td>'+ to +'</td>';
+            rows += '<td>'+ subject +'</td>';
+            rows += '<td>';
+        
+                if(snippet != ''){
+                    rows += snippet + '... <span class="readmore" id="message-link-' + message.id + '">read more</span>';
+                }
+        
+            rows += '</td>';
+            rows += '<td>';
+            
+            if(message.payload.filename != ""){
+                attachmentfilename = message.payload.filename;
+            } else {
+                if(message.payload.parts != undefined){
+                    for(a = 0; a < message.payload.parts.length; a++){
+                        if(message.payload.parts[a].filename != '' && message.payload.parts[a].filename != undefined){
+                            var params = {
+                                atch_id: message.payload.parts[a].body.attachmentId,
+                                atch_filename: message.payload.parts[a].filename,
+                                atch_mimeType: message.payload.parts[a].mimeType,
+                                atch_size: message.payload.parts[a].body.size
+                            }
+                            
+                            attachments.push(params);
+                            rows += message.payload.parts[a].filename + '; ';
+                        }
+                    }
+                }
+            }
 
-         function reformatDate(s) {
+            rows += '</td>';
+            rows += '<td class="text-center" data-order="'+ moment.unix(message.internalDate/1000).format("YYYY-MM-DD-HH:mm") +'" >'+ moment.unix(message.internalDate/1000).format("DD MMM YYYY HH:mm A") +'</td>';
+             rows += '<td hidden class="text-center" data-order="'+ moment.unix(message.internalDate/1000).format("YYYY-MM-DD-HH:mm") +'" >'+ moment.unix(message.internalDate/1000).format("M/D/YY") +'</td>';
+            rows += '<td class="text-center" nowrap>';
+            rows += '<button type="button" class="btn btn-xs btn-success btn-row-action '+$exstBtnSaveDisplay+'" id="save-message-link-' + message.id + '">Save</button>';
+            rows += '<button type="button" class="btn btn-xs btn-primary btn-row-action" id="reply-message-link-' + message.id + '">Reply</button>';
+            rows += '</td>';
+            rows += '</tr>';
 
+            $('.table-inbox tbody').append(rows);
+        
+        var reply_to = (getHeader(message.payload.headers, 'Reply-to') !== '' ? getHeader(message.payload.headers, 'Reply-to') : getHeader(message.payload.headers, 'From')).replace(/\"/g, '&quot;');
+        var reply_subject = getHeader(message.payload.headers, 'Subject').replace(/\"/g, '&quot;');
+        
+        if (reply_subject.indexOf("Re: ") < 0){
+            reply_subject = 'Re: '+ reply_subject;
+        }
+        
+        var emctr = parseInt($("#emailcnt").val()),
+            reqmsg = parseInt($("#noOfEmails").val());
+            emctr = emctr + 1;
+            $("#emailcnt").val(emctr);
+        
+            if(reqmsg == emctr){
+                console.log('generate now');
+                setTimeout(function(){
+                    $('#tbl_records').dataTable({
+                        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                        "aoColumnDefs" : [{'bSortable' : false, 'aTargets' : [-1]}],
+                        "aaSorting": [4, 'desc']
+                    });
+                    
+                    $('#section_records').show();
+                    $('#screen_loading').hide();
+                    $('.table-inbox').removeClass("hidden");
+                    $('#btnExport').removeClass("hidden");
+                    //$('#assignToNotes').removeClass("hidden");
+                    console.log('table is generated');
+                }, 1000);
+            }
+            
+            
+        var msg_params = {
+            profile_id: $("#connection_profile").text(),
+            msg_message_id: message.id,
+            msg_raw_message_id: getHeader(message.payload.headers, 'Message-ID'),
+            msg_thread_id: message.threadId,
+            msg_body: getBody(message.payload),
+            msg_body_mime: message.payload.mimeType,
+            msg_subject: subject,
+            msg_to: to,
+            msg_from: from,
+            msg_reply_to: reply_to,
+            msg_in_reply_to: getHeader(message.payload.headers, 'In-Reply-To'),
+            msg_date: date,
+            msg_microtime: message.internalDate,
+            msg_snippet: snippet,
+            msg_attachments: attachments
+        }
+        
+        msg_params = btoa(unescape(encodeURIComponent(JSON.stringify(msg_params))));
+        msg_orig = btoa(unescape(encodeURIComponent(JSON.stringify(message.payload))));
+        
+            modal += '<div class="modal fade" id="message-modal-' + message.id + '" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">';
+            modal += '<div class="modal-dialog modal-lg">';
+            modal += '<div class="modal-content">';
+            modal += '<div class="modal-body">';
+            modal += '<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
+            modal += '<span style="font-size:16px; font-weight:700" class="modal-title" id="myModalLabel">' + subject + '</span><hr/>';
+            modal += '<div class="row">';
+            modal += '<div class="col-lg-8 text-left">';
+            modal += '<span style="font-size:12px;">From: <i>' + from + '</i></span>';
+            modal += '</div>';
+            modal += '<div class="col-lg-4 text-right">';
+            modal += '<span style="font-size:12px;">' + moment.unix(message.internalDate/1000).format("DD MMM YYYY HH:mm A") + '</span>';
+            modal += '</div>';
 
-  
-  function z(n){return ('0' + n).slice(-2)}
-  var months = [,'jan','feb','mar','apr','may','jun',
-                 'jul','aug','sep','oct','nov','dec'];
-  var b = s.split(/\W+/);
-  return b[3] + '/' +
-    z(months.indexOf(b[1].substr(0,3).toLowerCase())) + '/' +
-    z(b[2]);
-}
+            modal += '<div class="col-lg-12">';
+            modal += '<span style="font-size:12px;">To: <i>' + to + '</i></span>';
+            modal += '</div>';
+            modal += '</div>';
+            modal += '<hr/><iframe id="message-iframe-'+message.id+'" srcdoc="<p>Loading...</p>"></iframe><hr/>';
+            
+            if(attachments.length > 0){
+                modal += '<div class="row">';
+                modal += '<div class="col-lg-12"><small>';
+                for(var b=0; b < attachments.length; b++){
+                    modal += attachments[b].atch_filename + "; ";
+                }
+                modal += '</small></div>';
+                modal += '</div><hr/>';    
+            }
+            
+            modal += '<div class="row">';
+            modal += '<div class="col-lg-12">';
+            //modal += '<button type="button" class="btn btn-default pull-right" data-dismiss="modal" style="margin-left:1%;">Close</button>';
+            modal += '<button type="button" id="btnOptReply_'+message.id+'" class="btn btn-primary reply-button pull-right" data-dismiss="modal" data-toggle="modal" data-target="#reply-modal" style="margin-left:1%;" onclick="fillInReply(\''+reply_to+'\', \''+ reply_subject.replace(/'/g, "\\'") +'\', \''+ from +'\', \''+ date +'\',  \''+getHeader(message.payload.headers, 'Message-ID')+'\', \''+ msg_orig +'\' );">Reply to Email</button>';
+            modal += '<button type="button" id="btnOptSave_'+message.id+'" class="btn btn-success reply-button pull-right" data-dismiss="modal" data-toggle="modal" style="margin-left:1%;" onclick="fillInMoveToNotes(\'' + msg_params + '\');">Save to Notes</button>';
+            //modal += '<button type="button" id="btnOptReplySave" data-dismiss="modal" data-toggle="modal" data-target="#movetonotes-modal" style="display:none"></button>';
+            modal += '</div>';
+            modal += '</div>';
+            modal += '</div>';
+            modal += '</div>';
+            modal += '</div>';
+            modal += '</div>';
+            
+            $('body').append(modal);
+        
+            $('#message-link-'+message.id).on('click', function(){
+                //var ifrm = $('#message-iframe-'+message.id)[0].contentWindow.document;
+                //$('body', ifrm).html(getBody(message.payload));
+                
+                var newWindow = window.open("", "_blank", "toolbar=yes,scrollbars=yes,resizable=yes,top=40,left=220,width=900,height=560");
+                    newWindow.document.write(getBody(message.payload));
+                    newWindow.document.title = "Subject: " + subject;
+            });
 
+            $('#save-message-link-'+message.id).on('click', function(){
+                //var ifrm = $('#message-iframe-'+message.id)[0].contentWindow.document;
+                //console.log(ifrm);
+                //$('body', ifrm).html(getBody(message.payload));
+                $("#btnOptSave_"+message.id).click();
+                
+                //var newWindow = window.open("", "_blank", "toolbar=yes,scrollbars=yes,resizable=yes,top=50,left=300,width=800,height=400");;
+                //newWindow.document.write(getBody(message.payload));
+            });
+            
+            $('#reply-message-link-'+message.id).on('click', function(){
+                //var ifrm = $('#message-iframe-'+message.id)[0].contentWindow.document;
+                //console.log(ifrm);
+                //$('body', ifrm).html(getBody(message.payload));
+                $("#btnOptReply_"+message.id).click();
+                
+                //var newWindow = window.open("", "_blank", "toolbar=yes,scrollbars=yes,resizable=yes,top=50,left=300,width=800,height=400");;
+                //newWindow.document.write(getBody(message.payload));
+            });
 
+    }
+    
+    function sendEmail() {
+        $('#send-button').addClass('disabled');
+        sendMessage({
+            'To': $('#compose-to').val(),
+            'Subject': $('#compose-subject').val()
+        }, $('#compose-message').val(), composeTidy);
+        return false;
+    }
 
-console.log(reformatDate(s));
+    function composeTidy(){
+        $('#compose-modal').modal('hide');
+        $('#compose-to').val('');
+        $('#compose-subject').val('');
+        $('#compose-message').val('');
+        $('#send-button').removeClass('disabled');
+    }
 
-        $('.table-inbox tbody').append(
-          '<tr>\
-            <td>'+getHeader(message.payload.headers, 'From')+'</td>\
-            <td>\
-              <a href="#message-modal-' + message.id +
-                '" data-toggle="modal" id="message-link-' + message.id+'">' +
-                getHeader(message.payload.headers, 'Subject') +
-              '</a>\
-            </td>\
-            <td>'+message.snippet.substring(0,50)+'...<a href="#">read more</a></td>\
-            <td>'+message.attachments+'</td>\
-            <td>' /*moment.unix(message.internalDate/1000).format("YYYY-MM-DD-HH:mm") +' >'*/+ moment.unix(message.internalDate/1000).format("DD MMM YYYY HH:mm A") +'</td>\
-            <td hidden>'+ moment.unix(message.internalDate/1000).format("MM/DD/YYYY") +'</td>\
-            <td>'+"<button class='btn btn-xs btn-success' btn-row-action>Save</button>"+"<button class='btn btn-xs btn-info' btn-row-action>Reply</button>"+'</td>\
-          </tr>'
-        );
+    function sendReply(){
+        $('#reply-button').addClass('disabled');
+        //'Cc': 'adrian.silva@lophils.com',
+        //'Bcc': 'it@smallbuilders.com.au',
+        
+        sendMessage({
+            'To': $('#reply-to').val(),
+            'Subject': $('#reply-subject').val(),
+            'In-Reply-To': $('#reply-message-id').val(),
+            'Message-ID': $('#reply-message-id').val(),
+            'Content-Type': 'text/html; charset=utf-8'
 
-        $('body').append(
-          '<div class="modal fade" id="message-modal-' + message.id +
-              '" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">\
-            <div class="modal-dialog modal-lg">\
-              <div class="modal-content">\
-                <div class="modal-header">\
-                  <button type="button"\
-                          class="close"\
-                          data-dismiss="modal"\
-                          aria-label="Close">\
-                    <span aria-hidden="true">&times;</span></button>\
-                  <h4 class="modal-title" id="myModalLabel">' +
-                    getHeader(message.payload.headers, 'Subject') +
-                  '</h4>\
-                </div>\
-                <div class="modal-body">\
-                  <iframe id="message-iframe-'+message.id+'" srcdoc="<p>Loading...</p>">\
-                  </iframe>\
-                </div>\
-              </div>\
-            </div>\
-          </div>'
-        );
+        }, $('#reply-message').val(), replyTidy);
+        return false;
+    }
 
-        $('#message-link-'+message.id).on('click', function(){
-          var ifrm = $('#message-iframe-'+message.id)[0].contentWindow.document;
-          $('body', ifrm).html(getBody(message.payload));
-        });
-      }
+    function replyTidy(){
+        var newMsgId = arguments[0].result.id,
+            newThreadId = arguments[0].result.threadId;
+        
+        $('#repliedMsgId').val(newMsgId);
+        $('#repliedThreadId').val(newThreadId);
+        
+        $("#replyMessageResult").text("Email successfully sent.");
+        $("#divReplyMessage").addClass("alert-success");
+        $("#divReplyMessage").css("display", "block");
+        
+        setTimeout(function(){
+            //pre-fill saving notes page
+            $('#mnotes-subject').text($('#reply-subject').val());
+            $('#mnotes-subject').css('display', 'none');
+            $('#saveReplyTitle').text('Save Replied Email to Notes');
+            $("#mnotes-snippet").val($('#reply-message').val());
+            $("#projectname").val('');
+            $("#status").val('');
+            $("#personresponsible").val('');
+            $("#personresponsible").trigger('chosen:updated');
+            $("#duedate").val('');
+            $("#discussion").val('');
+            $("#discussion").trigger('chosen:updated');
+            $('#btnSaveToNotes').hide();
+            $('#btnReplySave').show();
+            $('#reply-modal').modal('hide');
+            $('#reply-button').removeClass('disabled');
+            $('#movetonotes-modal').modal('show');
+        }, 1000);
+    }
 
-      function getHeader(headers, index) {
+    function fillInReply(to, subject, from, date, reply_message_id, msg_orig){
+        $("#replyMessageResult").text("");
+        $("#divReplyMessage").css("display", "none");
+        $("#divReplyMessage").removeClass("alert-success");
+        $("#divReplyMessage").removeClass("alert-danger");
+        $('#reply-to').val(to);
+        $('#reply-subject').val(subject);
+        $('#reply-message-id').val(reply_message_id);
+        $('#reply-from').val(from);
+        $('#reply-date_received').val(date);
+        $('#reply-previous-message').val(msg_orig);
+        $('#repliedMsgId').val('');
+        $('#reply-message').val('');
+    }
+    
+    function fillInMoveToNotes(msg_params){
+        var msg = JSON.parse(decodeURIComponent(escape(atob(msg_params))));
+            setTimeout(function(){ 
+                $('#btn-open-modal-move-to-notes').click();
+            }, 500);
+            $('#btnSaveToNotes').show();
+            $('#btnReplySave').hide();
+            $("#moveToNotesResult").text('');
+            $("#projectname").val('');
+            $("#mnotes-snippet").val('');
+            $("#status").val('');
+            $("#personresponsible").val('');
+            $("#personresponsible").trigger('chosen:updated');
+            $("#duedate").val('');
+            $("#discussion").val('');
+            $("#discussion").trigger('chosen:updated');
+            $("#divMoveToNotes").css("display", "none");
+            $("#divMoveToNotes").removeClass("alert-success");
+            $("#divMoveToNotes").removeClass("alert-danger");
+            $('#mselected-msg').val(msg_params);
+            $('#mnotes-subject').text(msg.msg_subject);
+            $('#mnotes-subject').css('display', 'block');
+            $('#saveReplyTitle').text('');
+            $('#mnotes-snippet').val(msg.msg_snippet);
+    }
+    
+    function sendMessage(headers_obj, message, callback){
+        var email = '',
+            msg_body = JSON.parse(decodeURIComponent(escape(atob($("#reply-previous-message").val())))),
+            date_received = $('#reply-date_received').val(),
+            received_from = $('#reply-from').val(),
+            reply_src = '', joinedmsg = '',
+            msg_body = getBody(msg_body);
+            
+            reply_src += '<br/><br/><div class="gmail_quote">On ' + date_received.trim() + ', <span dir="ltr">'+ received_from.trim() +'</b> wrote:<br>';
+            reply_src += '<blockquote class="gmail_quote" style="margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex">';
+            reply_src += msg_body;
+            reply_src += '</blockquote></div>';
+            
+            joinedmsg += "\r\n" + message.replace(/\n/g, "<br />") + reply_src;
+
+        for(var header in headers_obj)
+            email += header += ": "+headers_obj[header]+"\r\n";
+            email += joinedmsg;
+            
+            var sendRequest = gapi.client.gmail.users.messages.send({
+                'userId': 'me',
+                'resource': {
+                    'raw': window.btoa(unescape(encodeURIComponent(email))).replace(/\+/g, '-').replace(/\//g, '_')
+                }
+            });
+
+        $("#repliedMsg").val(btoa(unescape(encodeURIComponent(joinedmsg))));
+        return sendRequest.execute(callback);
+    }
+
+    function getHeader(headers, index) {
         var header = '';
-
         $.each(headers, function(){
-          if(this.name === index){
-            header = this.value;
-          }
+            if(this.name.toLowerCase() === index.toLowerCase()){
+                header = this.value;
+            }
         });
         return header;
-      }
+    }
 
-      function getBody(message) {
+    function getBody(message) {
         var encodedBody = '';
-        if(typeof message.parts === 'undefined')
-        {
-          encodedBody = message.body.data;
+        if(message.parts === undefined){
+            encodedBody = message.body.data;
+        } else {
+            encodedBody = getHTMLPart(message.parts);
         }
-        else
-        {
-          encodedBody = getHTMLPart(message.parts);
-        }
+        
         encodedBody = encodedBody.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
         return decodeURIComponent(escape(window.atob(encodedBody)));
-      }
+    }
 
-      function getHTMLPart(arr) {
-        for(var x = 0; x <= arr.length; x++)
-        {
-          if(typeof arr[x].parts === 'undefined')
-          {
-            if(arr[x].mimeType === 'text/html')
-            {
-              return arr[x].body.data;
+    function getHTMLPart(arr) {
+        
+        for(var x = 0; x <= arr.length; x++){
+            //console.log(arr[x]);
+            
+            if(arr[x]!==undefined){
+                if(arr[x].parts !== undefined){
+                    return getHTMLPart(arr[x].parts);
+                } else {
+                    if(arr[x].mimeType === 'text/html'){
+                        return arr[x].body.data;
+                    }
+                }    
+            } else {
+                return '';
             }
-          }
-          else
-          {
-            return getHTMLPart(arr[x].parts);
-          }
+            
         }
         return '';
-      }
-
+    }
+    
 
     </script>
     <script src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
