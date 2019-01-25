@@ -35,7 +35,7 @@
                                 </p>
                                 <br/><br/>
 
-                               <div class="form-group">
+                             <div class="form-group hidden" id="selectfilter">
                                    
                                     <select class="form-control"  id="OperationType" onchange="check();">
                                      
@@ -44,11 +44,12 @@
                                     
                                     </select>
                                   </div>
-                            </section>
                        
-                        
+                          
+                            </section>
                       
                         <div id=OperationNos style="display: none;">
+
                           <div class="col-sm-12" >
                            <div class="col-sm-3" > 
                     
@@ -73,11 +74,11 @@
                             <div id="advfilter">
                                      <div class="col-md-3">  
                      
-                  <input id="searchFrom" class="searchInput" type="text" placeholder="From"/>
+                  <input id="searchFrom" class="searchInput" onkeydown="test()" type="text" placeholder="From" value="01/24/2019" />
 
                 </div>  
                 <div class="col-md-3">  
-                   <input id="searchTo" class="searchInput" type="text" placeholder="To" >  
+                   <input id="searchTo" class="searchInput" onkeydown="test()" type="text" placeholder="To" value="01/24/2019" >  
                 </div>  
 
               
@@ -108,7 +109,7 @@
                               <input style="" type="text"  id="myInput"  class="form-control " placeholder="Search"><br>
                                </div>
                                </div> -->
-                                  <table id="tbl_records" class="table table-striped table-bordered table-inbox">
+                                  <table id="tbl_records" class="table table-striped table-bordered table-inbox hidden">
                         <thead>
                             <tr>
                                 <!--<td class='tbth text-center'><input type="checkbox" id="chkAll" align="center"></td>-->
@@ -133,7 +134,23 @@
   
         </div>
 
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <script>
+  $( function() {
+    $( "#searchFrom" ).datepicker().on('changeDate', function(e){
+      self.loadEvents();
+  } );
+} )
+  
+   $( function() {
+    $( "#searchTo" ).datepicker().on('changeDate', function(e){
+      self.loadEvents();
+  } );
+} )
+  </script>
   <!--   <script type="text/javascript">
         
            $(document).ready(function(){  
@@ -160,6 +177,13 @@ function advfilter() {
     x.style.display = "none";
   }
 }
+
+
+
+
+
+
+
 $(".searchInput").on("input", function() {
   var from = stringToDate($("#searchFrom").val());
   var to = stringToDate($("#searchTo").val());
@@ -296,6 +320,7 @@ function myFunctionContent() {
             $('#myInputContent').removeClass("hidden");
             $('#myInputSubject').removeClass("hidden");
              $('#advfilter').removeClass("hidden");
+              $('#selectfilter').removeClass("hidden");
              $('#fil').removeClass("hidden");
             $('#signout-button').removeClass("hidden");
              $('.table-inbox').removeClass("hidden");
@@ -591,18 +616,7 @@ document.querySelector('#myInput').addEventListener('keyup', filterTable, false)
 </script> -->
        
 
-  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-  <link rel="stylesheet" href="/resources/demos/style.css">
-  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-  <script>
-  $( function() {
-    $( "#searchFrom" ).datepicker();
-  } );
-   $( function() {
-    $( "#searchTo" ).datepicker();
-  } );
-  </script>
+
 <script src="js/jquery.dataTables.js"></script>
 <script src="js/dataTables.bootstrap.js"></script>
     <script src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
