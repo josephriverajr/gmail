@@ -10,7 +10,9 @@
            <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>  
            <link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">  
             <script src="https://rawgit.com/moment/moment/2.2.1/min/moment.min.js"></script>
-
+<link rel="stylesheet" href="css/bootstrap.min.css"> 
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="css/dataTables.bootstrap.css"/>
   <style>
     iframe {
       width: 100%;
@@ -24,15 +26,6 @@
   <body>
     <div class="container">
       <h1>Gmail API demo</h1>
-
-
-
-
-
-
-
-
-
           <section class="pull-left text-center">
                                 <p class="text-left">Status: <span id="connection_status"></span><br/></p>
                                 <p class="text-left" id="p_connection_profile">Account: <span id="connection_profile" class="text-info"></span><br/></p>
@@ -42,15 +35,20 @@
                                 </p>
                                 <br/><br/>
 
+                               <div class="form-group">
+                                   
+                                    <select class="form-control"  id="OperationType" onchange="check();">
+                                     
+                                      <option value="Select">Select</option>
+                                       <option value="Filter">Filter</option>
+                                    
+                                    </select>
+                                  </div>
                             </section>
                        
                         
-                        <div id="hasExistingEmails" class="col-lg-12" style="display:none">
-                            <br/><input type="hidden" id="emailcnt" value="0">
-                            <div class="col-lg-12 alert alert-info">
-                                <span id="noOfExistingEmails"></span>
-                            </div>
-                        </div>
+                      
+                        <div id=OperationNos style="display: none;">
                           <div class="col-sm-12" >
                            <div class="col-sm-3" > 
                     
@@ -68,6 +66,7 @@
                
                 </div>
                 </div>
+              
                 <div class="hidden" id="fil">
                 <div class='col-lg-12' style="margin-top: 15px; margin-bottom: 15px;">
                     <label><input type="checkbox" " name="advfilter" checked=""  onclick="advfilter()">Show advanced filters</label>
@@ -80,10 +79,13 @@
                 <div class="col-md-3">  
                    <input id="searchTo" class="searchInput" type="text" placeholder="To" >  
                 </div>  
+
               
 
                 </div>
                 </div>
+              </div>
+            </div>
                 <div class='col-lg-12' style="margin-top: 15px; margin-bottom: 15px;">
                       <div id="divRetrieve">
                             <div class='col-lg-2'>
@@ -94,9 +96,19 @@
                             </div>
                         </div>
                     </div>
-
+  <div id="hasExistingEmails" class="col-lg-12" style="display:none">
+                            <br/><input type="hidden" id="emailcnt" value="0">
+                            <div class="col-lg-12 alert alert-info">
+                                <span id="noOfExistingEmails"></span>
+                            </div>
+                        </div>
               <section id="section_records">
-                                  <table id="tbl_records" class="table table-striped table-bordered table-inbox hidden">
+            <!--     <div class="col-lg-18">
+                <div class="col-lg-12" style="width: 20%; float: right;display:block;">
+                              <input style="" type="text"  id="myInput"  class="form-control " placeholder="Search"><br>
+                               </div>
+                               </div> -->
+                                  <table id="tbl_records" class="table table-striped table-bordered table-inbox">
                         <thead>
                             <tr>
                                 <!--<td class='tbth text-center'><input type="checkbox" id="chkAll" align="center"></td>-->
@@ -106,12 +118,13 @@
                                 <td class='text-center' nowrap>Attachment(s)</td>
                                 <td class='text-center' nowrap>Date Received</td>
                                 <td class='text-center' nowrap>Action</td>
+                                <td hidden></td>
                             </tr>
+                               <tbody id="tbl_tbody"></tbody>
                         </thead>
-                        <tbody id="tbl_tbody"></tbody>
+                   
                     </table>
-                    
-                    
+ 
                 </section>
     </div>
 
@@ -121,7 +134,7 @@
         </div>
 
 
-<!--     <script type="text/javascript">
+  <!--   <script type="text/javascript">
         
            $(document).ready(function(){  
            $.datepicker.setDefaults({  
@@ -133,6 +146,10 @@
                 $("#searchTo").datepicker();  
            });  
     </script> -->
+
+                   
+                      
+
     <script type="text/javascript">
 
 function advfilter() {
@@ -226,6 +243,7 @@ function myFunctionContent() {
   table = document.getElementById("tbl_records");
   tr = table.getElementsByTagName("tr");
   for (i = 0; i < tr.length; i++) {
+
     td = tr[i].getElementsByTagName("td")[2];
     if (td) {
       txtValue = td.textContent || td.innerText;
@@ -338,28 +356,60 @@ function myFunctionContent() {
     
 
 
-
-      function displayInbox() {
-        document.getElementById("tbl_records").removeChild(document.getElementById("tbl_tbody"));
-        $('.table-inbox').append('<tbody id="tbl_tbody"></tbody>');
-        var noOfEmails = document.getElementById("noOfEmails").value || 0;
-        var request = gapi.client.gmail.users.messages.list({
-          'userId': 'me',
-          'labelIds': 'INBOX',
-          'maxResults': noOfEmails 
-        });
-
-        request.execute(function(response) {
-          $.each(response.messages, function() {
-            var messageRequest = gapi.client.gmail.users.messages.get({
-              'userId': 'me',
-              'id': this.id
+function displayInbox() {
+        var noOfEmails = $("#noOfEmails").val();
+            $("#emailcnt").val('0');
+            window.g_existing_mid = [];
+            
+        if(noOfEmails == "" || noOfEmails == undefined || noOfEmails <= 0){
+            alert("Plese enter the number of emails you want to retrieve from Gmail.");
+            $("#noOfEmails").focus();
+        } else if(noOfEmails > 100) {
+            alert("Request limit reached. (Maximum emails allowed: 100)");
+            $("#noOfEmails").val(100);
+        } else {
+            
+            var profile_id = btoa($("#connection_profile").text()),
+                client_id = '399013516612-52n7dthtsdqomgd1r642faqa85dgo5hn.apps.googleusercontent.com',
+                d = 0;
+                
+            $.get( "test.php?profile_id=" + profile_id + "&client_id=" + client_id, function( data ) {
+             /*   var result = JSON.parse(data);
+                
+                for(c=0; c<result[0].data.length; c++){
+                    window.g_existing_mid.push(result[0].data[c].message_id);
+                }
+                
+                if(result[0].data.length <= 0){
+                    $('#btnExport').addClass("hidden");
+                }*/
+                
+                var request = gapi.client.gmail.users.messages.list({
+                    'userId': 'me',
+                    'labelIds': 'INBOX',
+                    'maxResults': noOfEmails
+                });
+                
+                request.execute(function(response) {
+                    $("#noOfEmails").val(response.messages.length);
+                    $('#section_records').hide();
+                   
+                    $("#tbl_records").dataTable().fnDestroy();
+                    $("#tbl_records tbody").html('');
+                    $("#noOfExistingEmails").text('');
+                    $("#hasExistingEmails").hide();
+                    
+                    $.each(response.messages, function() {
+                        var messageRequest = gapi.client.gmail.users.messages.get({
+                            'userId': 'me',
+                            'id': this.id
+                        });
+                        messageRequest.execute(appendMessageRow);
+                    });
+                });
             });
-
-            messageRequest.execute(appendMessageRow);
-          });
-        });
-      }
+        }
+    }
 
 
 
@@ -382,7 +432,8 @@ function myFunctionContent() {
                 $exstBtnSaveDisplay = 'hidden';
             }
             
-            rows += '<tr class="'+ $exstClass +'" title="'+ $exstTitle +'">';
+
+            rows += '<tr>';
             rows += '<td>'+ from +'</td>';
             //rows += '<td>'+ to +'</td>';
             rows += '<td>'+ subject +'</td>';
@@ -417,7 +468,7 @@ function myFunctionContent() {
 
             rows += '</td>';
             rows += '<td class="text-center" data-order="'+ moment.unix(message.internalDate/1000).format("YYYY-MM-DD-HH:mm") +'" >'+ moment.unix(message.internalDate/1000).format("DD MMM YYYY HH:mm A") +'</td>';
-             rows += '<td hidden class="text-center" data-order="'+ moment.unix(message.internalDate/1000).format("YYYY-MM-DD-HH:mm") +'" >'+ moment.unix(message.internalDate/1000).format("M/D/YY") +'</td>';
+             rows += '<td HIDDEN class="text-center" data-order="'+ moment.unix(message.internalDate/1000).format("YYYY-MM-DD-HH:mm") +'" >'+ moment.unix(message.internalDate/1000).format("MM/DD/YYYY") +'</td>';
             rows += '<td class="text-center" nowrap>';
             rows += '<button type="button" class="btn btn-xs btn-success btn-row-action '+$exstBtnSaveDisplay+'" id="save-message-link-' + message.id + '">Save</button>';
             rows += '<button type="button" class="btn btn-xs btn-primary btn-row-action" id="reply-message-link-' + message.id + '">Reply</button>';
@@ -425,14 +476,7 @@ function myFunctionContent() {
             rows += '</tr>';
 
             $('.table-inbox tbody').append(rows);
-        
-        var reply_to = (getHeader(message.payload.headers, 'Reply-to') !== '' ? getHeader(message.payload.headers, 'Reply-to') : getHeader(message.payload.headers, 'From')).replace(/\"/g, '&quot;');
-        var reply_subject = getHeader(message.payload.headers, 'Subject').replace(/\"/g, '&quot;');
-        
-        if (reply_subject.indexOf("Re: ") < 0){
-            reply_subject = 'Re: '+ reply_subject;
-        }
-        
+
         var emctr = parseInt($("#emailcnt").val()),
             reqmsg = parseInt($("#noOfEmails").val());
             emctr = emctr + 1;
@@ -441,254 +485,27 @@ function myFunctionContent() {
             if(reqmsg == emctr){
                 console.log('generate now');
                 setTimeout(function(){
-                    $('#tbl_records').dataTable({
+                  var dTable = $('#tbl_records');
+                   dTable.dataTable({
                         "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
                         "aoColumnDefs" : [{'bSortable' : false, 'aTargets' : [-1]}],
                         "aaSorting": [4, 'desc']
                     });
                     
                     $('#section_records').show();
-                    $('#screen_loading').hide();
+                  
                     $('.table-inbox').removeClass("hidden");
-                    $('#btnExport').removeClass("hidden");
+                  
                     //$('#assignToNotes').removeClass("hidden");
                     console.log('table is generated');
                 }, 1000);
-            }
-            
-            
-        var msg_params = {
-            profile_id: $("#connection_profile").text(),
-            msg_message_id: message.id,
-            msg_raw_message_id: getHeader(message.payload.headers, 'Message-ID'),
-            msg_thread_id: message.threadId,
-            msg_body: getBody(message.payload),
-            msg_body_mime: message.payload.mimeType,
-            msg_subject: subject,
-            msg_to: to,
-            msg_from: from,
-            msg_reply_to: reply_to,
-            msg_in_reply_to: getHeader(message.payload.headers, 'In-Reply-To'),
-            msg_date: date,
-            msg_microtime: message.internalDate,
-            msg_snippet: snippet,
-            msg_attachments: attachments
-        }
-        
-        msg_params = btoa(unescape(encodeURIComponent(JSON.stringify(msg_params))));
-        msg_orig = btoa(unescape(encodeURIComponent(JSON.stringify(message.payload))));
-        
-            modal += '<div class="modal fade" id="message-modal-' + message.id + '" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">';
-            modal += '<div class="modal-dialog modal-lg">';
-            modal += '<div class="modal-content">';
-            modal += '<div class="modal-body">';
-            modal += '<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
-            modal += '<span style="font-size:16px; font-weight:700" class="modal-title" id="myModalLabel">' + subject + '</span><hr/>';
-            modal += '<div class="row">';
-            modal += '<div class="col-lg-8 text-left">';
-            modal += '<span style="font-size:12px;">From: <i>' + from + '</i></span>';
-            modal += '</div>';
-            modal += '<div class="col-lg-4 text-right">';
-            modal += '<span style="font-size:12px;">' + moment.unix(message.internalDate/1000).format("DD MMM YYYY HH:mm A") + '</span>';
-            modal += '</div>';
+       }
 
-            modal += '<div class="col-lg-12">';
-            modal += '<span style="font-size:12px;">To: <i>' + to + '</i></span>';
-            modal += '</div>';
-            modal += '</div>';
-            modal += '<hr/><iframe id="message-iframe-'+message.id+'" srcdoc="<p>Loading...</p>"></iframe><hr/>';
-            
-            if(attachments.length > 0){
-                modal += '<div class="row">';
-                modal += '<div class="col-lg-12"><small>';
-                for(var b=0; b < attachments.length; b++){
-                    modal += attachments[b].atch_filename + "; ";
-                }
-                modal += '</small></div>';
-                modal += '</div><hr/>';    
-            }
-            
-            modal += '<div class="row">';
-            modal += '<div class="col-lg-12">';
-            //modal += '<button type="button" class="btn btn-default pull-right" data-dismiss="modal" style="margin-left:1%;">Close</button>';
-            modal += '<button type="button" id="btnOptReply_'+message.id+'" class="btn btn-primary reply-button pull-right" data-dismiss="modal" data-toggle="modal" data-target="#reply-modal" style="margin-left:1%;" onclick="fillInReply(\''+reply_to+'\', \''+ reply_subject.replace(/'/g, "\\'") +'\', \''+ from +'\', \''+ date +'\',  \''+getHeader(message.payload.headers, 'Message-ID')+'\', \''+ msg_orig +'\' );">Reply to Email</button>';
-            modal += '<button type="button" id="btnOptSave_'+message.id+'" class="btn btn-success reply-button pull-right" data-dismiss="modal" data-toggle="modal" style="margin-left:1%;" onclick="fillInMoveToNotes(\'' + msg_params + '\');">Save to Notes</button>';
-            //modal += '<button type="button" id="btnOptReplySave" data-dismiss="modal" data-toggle="modal" data-target="#movetonotes-modal" style="display:none"></button>';
-            modal += '</div>';
-            modal += '</div>';
-            modal += '</div>';
-            modal += '</div>';
-            modal += '</div>';
-            modal += '</div>';
-            
-            $('body').append(modal);
-        
-            $('#message-link-'+message.id).on('click', function(){
-                //var ifrm = $('#message-iframe-'+message.id)[0].contentWindow.document;
-                //$('body', ifrm).html(getBody(message.payload));
-                
-                var newWindow = window.open("", "_blank", "toolbar=yes,scrollbars=yes,resizable=yes,top=40,left=220,width=900,height=560");
-                    newWindow.document.write(getBody(message.payload));
-                    newWindow.document.title = "Subject: " + subject;
-            });
-
-            $('#save-message-link-'+message.id).on('click', function(){
-                //var ifrm = $('#message-iframe-'+message.id)[0].contentWindow.document;
-                //console.log(ifrm);
-                //$('body', ifrm).html(getBody(message.payload));
-                $("#btnOptSave_"+message.id).click();
-                
-                //var newWindow = window.open("", "_blank", "toolbar=yes,scrollbars=yes,resizable=yes,top=50,left=300,width=800,height=400");;
-                //newWindow.document.write(getBody(message.payload));
-            });
-            
-            $('#reply-message-link-'+message.id).on('click', function(){
-                //var ifrm = $('#message-iframe-'+message.id)[0].contentWindow.document;
-                //console.log(ifrm);
-                //$('body', ifrm).html(getBody(message.payload));
-                $("#btnOptReply_"+message.id).click();
-                
-                //var newWindow = window.open("", "_blank", "toolbar=yes,scrollbars=yes,resizable=yes,top=50,left=300,width=800,height=400");;
-                //newWindow.document.write(getBody(message.payload));
-            });
 
     }
+
     
-    function sendEmail() {
-        $('#send-button').addClass('disabled');
-        sendMessage({
-            'To': $('#compose-to').val(),
-            'Subject': $('#compose-subject').val()
-        }, $('#compose-message').val(), composeTidy);
-        return false;
-    }
-
-    function composeTidy(){
-        $('#compose-modal').modal('hide');
-        $('#compose-to').val('');
-        $('#compose-subject').val('');
-        $('#compose-message').val('');
-        $('#send-button').removeClass('disabled');
-    }
-
-    function sendReply(){
-        $('#reply-button').addClass('disabled');
-        //'Cc': 'adrian.silva@lophils.com',
-        //'Bcc': 'it@smallbuilders.com.au',
-        
-        sendMessage({
-            'To': $('#reply-to').val(),
-            'Subject': $('#reply-subject').val(),
-            'In-Reply-To': $('#reply-message-id').val(),
-            'Message-ID': $('#reply-message-id').val(),
-            'Content-Type': 'text/html; charset=utf-8'
-
-        }, $('#reply-message').val(), replyTidy);
-        return false;
-    }
-
-    function replyTidy(){
-        var newMsgId = arguments[0].result.id,
-            newThreadId = arguments[0].result.threadId;
-        
-        $('#repliedMsgId').val(newMsgId);
-        $('#repliedThreadId').val(newThreadId);
-        
-        $("#replyMessageResult").text("Email successfully sent.");
-        $("#divReplyMessage").addClass("alert-success");
-        $("#divReplyMessage").css("display", "block");
-        
-        setTimeout(function(){
-            //pre-fill saving notes page
-            $('#mnotes-subject').text($('#reply-subject').val());
-            $('#mnotes-subject').css('display', 'none');
-            $('#saveReplyTitle').text('Save Replied Email to Notes');
-            $("#mnotes-snippet").val($('#reply-message').val());
-            $("#projectname").val('');
-            $("#status").val('');
-            $("#personresponsible").val('');
-            $("#personresponsible").trigger('chosen:updated');
-            $("#duedate").val('');
-            $("#discussion").val('');
-            $("#discussion").trigger('chosen:updated');
-            $('#btnSaveToNotes').hide();
-            $('#btnReplySave').show();
-            $('#reply-modal').modal('hide');
-            $('#reply-button').removeClass('disabled');
-            $('#movetonotes-modal').modal('show');
-        }, 1000);
-    }
-
-    function fillInReply(to, subject, from, date, reply_message_id, msg_orig){
-        $("#replyMessageResult").text("");
-        $("#divReplyMessage").css("display", "none");
-        $("#divReplyMessage").removeClass("alert-success");
-        $("#divReplyMessage").removeClass("alert-danger");
-        $('#reply-to').val(to);
-        $('#reply-subject').val(subject);
-        $('#reply-message-id').val(reply_message_id);
-        $('#reply-from').val(from);
-        $('#reply-date_received').val(date);
-        $('#reply-previous-message').val(msg_orig);
-        $('#repliedMsgId').val('');
-        $('#reply-message').val('');
-    }
-    
-    function fillInMoveToNotes(msg_params){
-        var msg = JSON.parse(decodeURIComponent(escape(atob(msg_params))));
-            setTimeout(function(){ 
-                $('#btn-open-modal-move-to-notes').click();
-            }, 500);
-            $('#btnSaveToNotes').show();
-            $('#btnReplySave').hide();
-            $("#moveToNotesResult").text('');
-            $("#projectname").val('');
-            $("#mnotes-snippet").val('');
-            $("#status").val('');
-            $("#personresponsible").val('');
-            $("#personresponsible").trigger('chosen:updated');
-            $("#duedate").val('');
-            $("#discussion").val('');
-            $("#discussion").trigger('chosen:updated');
-            $("#divMoveToNotes").css("display", "none");
-            $("#divMoveToNotes").removeClass("alert-success");
-            $("#divMoveToNotes").removeClass("alert-danger");
-            $('#mselected-msg').val(msg_params);
-            $('#mnotes-subject').text(msg.msg_subject);
-            $('#mnotes-subject').css('display', 'block');
-            $('#saveReplyTitle').text('');
-            $('#mnotes-snippet').val(msg.msg_snippet);
-    }
-    
-    function sendMessage(headers_obj, message, callback){
-        var email = '',
-            msg_body = JSON.parse(decodeURIComponent(escape(atob($("#reply-previous-message").val())))),
-            date_received = $('#reply-date_received').val(),
-            received_from = $('#reply-from').val(),
-            reply_src = '', joinedmsg = '',
-            msg_body = getBody(msg_body);
-            
-            reply_src += '<br/><br/><div class="gmail_quote">On ' + date_received.trim() + ', <span dir="ltr">'+ received_from.trim() +'</b> wrote:<br>';
-            reply_src += '<blockquote class="gmail_quote" style="margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex">';
-            reply_src += msg_body;
-            reply_src += '</blockquote></div>';
-            
-            joinedmsg += "\r\n" + message.replace(/\n/g, "<br />") + reply_src;
-
-        for(var header in headers_obj)
-            email += header += ": "+headers_obj[header]+"\r\n";
-            email += joinedmsg;
-            
-            var sendRequest = gapi.client.gmail.users.messages.send({
-                'userId': 'me',
-                'resource': {
-                    'raw': window.btoa(unescape(encodeURIComponent(email))).replace(/\+/g, '-').replace(/\//g, '_')
-                }
-            });
-
-        $("#repliedMsg").val(btoa(unescape(encodeURIComponent(joinedmsg))));
-        return sendRequest.execute(callback);
-    }
+   
 
     function getHeader(headers, index) {
         var header = '';
@@ -735,6 +552,60 @@ function myFunctionContent() {
     
 
     </script>
+
+
+    <script type="text/javascript">
+  function check() {
+    var dropdown = document.getElementById("OperationType");
+    var current_value = dropdown.options[dropdown.selectedIndex].value;
+
+    if (current_value == "Filter") {
+        document.getElementById("OperationNos").style.display = "block";
+    }
+
+    else {
+        document.getElementById("OperationNos").style.display = "none";
+    }
+}
+</script>
+<!-- <script type="text/javascript">
+    function filterTable(event) {
+    var filter = event.target.value.toUpperCase();
+    var rows = document.querySelector("#tbl_records tbody").rows;
+    
+    for (var i = 0; i < rows.length; i++) {
+        var firstCol = rows[i].cells[0].textContent.toUpperCase();
+        var secondCol = rows[i].cells[1].textContent.toUpperCase();
+        var thirdCol = rows[i].cells[2].textContent.toUpperCase();
+        var forthCol = rows[i].cells[3].textContent.toUpperCase();
+        var fifthCol = rows[i].cells[4].textContent.toUpperCase();
+        if (firstCol.indexOf(filter) > -1 || secondCol.indexOf(filter) > -1 || thirdCol.indexOf(filter) > -1 || forthCol.indexOf(filter) > -1  || fifthCol.indexOf(filter) > -1 ){
+            rows[i].style.display = ""; 
+        } else {
+            rows[i].style.display = "none";
+        }      
+    }
+}
+
+document.querySelector('#myInput').addEventListener('keyup', filterTable, false);
+</script> -->
+       
+
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+  <link rel="stylesheet" href="/resources/demos/style.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <script>
+  $( function() {
+    $( "#searchFrom" ).datepicker();
+  } );
+   $( function() {
+    $( "#searchTo" ).datepicker();
+  } );
+  </script>
+<script src="js/jquery.dataTables.js"></script>
+<script src="js/dataTables.bootstrap.js"></script>
     <script src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
+ 
   </body>
 </html>
